@@ -1,154 +1,131 @@
 import json
 import socket
-
+import tkinter as tk
+from tkinter import ttk, messagebox
 
 HOST = "127.0.0.1"
 PORT = 5000
 
-
-def send_request(sock, request):
-    message = json.dumps(request) + "\n"
-    sock.sendall(message.encode("utf-8"))
-
-    response_line = b""
-
-    while not response_line.endswith(b"\n"):
-        chunk = sock.recv(4096)
-
-        if not chunk:
-            raise ConnectionError("Conexão com o servidor foi encerrada.")
-
-        response_line += chunk
-
-    response = json.loads(response_line.decode("utf-8"))
-    return response
-
-
-def print_menu():
-    print("\n================ MENU CLIENTE ================")
-    print("1 - Enviar mensagem ao servidor")
-    print("2 - Processar sequenciador com token")
-    print("3 - Processar várias rodadas do token")
-    print("4 - Mostrar estado do servidor")
-    print("5 - Mostrar mensagens entregues nos receptores")
-    print("6 - Verificar ordem total")
-    print("0 - Sair")
-    print("==============================================")
-
-
-def choose_sender():
-    valid_senders = ["E1", "E2", "E3"]
-
-    print("\nEmissores disponíveis:")
-    for sender in valid_senders:
-        print(f"  {sender}")
-
-    sender_id = input("Escolha o emissor: ").strip().upper()
-
-    if sender_id not in valid_senders:
-        print("Emissor inválido.")
-        return None
-
-    return sender_id
-
-
-def main():
-    print("Cliente do Sequenciador Móvel")
-    print(f"Conectando ao servidor {HOST}:{PORT}...")
-
+def send_request(request):
     try:
         with socket.create_connection((HOST, PORT)) as sock:
-            print("Conectado ao servidor.")
+            message = json.dumps(request) + "\n"
+            sock.sendall(message.encode("utf-8"))
+            
+            response_line = b""
+            while not response_line.endswith(b"\n"):
+                chunk = sock.recv(4096)
+                if not chunk: break
+                response_line += chunk
+                
+            return json.loads(response_line.decode("utf-8"))
+    except Exception as e:
+        return {"ok": False, "output": f"Erro: {e}"}
 
-            while True:
-                print_menu()
-                option = input("Escolha uma opção: ").strip()
+class DashboardSequenciador:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Simulador - Sequenciador Móvel")
+        self.root.geometry("750x650")
+        self.root.configure(bg="#f0f0f0")
 
-                if option == "1":
-                    sender_id = choose_sender()
+        # --- PAINEL SUPERIOR: CONTROLES ---
+        frame_controles = tk.Frame(root, bg="#f0f0f0", pady=10)
+        frame_controles.pack(fill="x", padx=20)
 
-                    if sender_id is None:
-                        continue
+        tk.Label(frame_controles, text="Emissor:", bg="#f0f0f0").pack(side="left")
+        self.emissor_var = tk.StringVar(value="E1")
+        ttk.Combobox(frame_controles, textvariable=self.emissor_var, values=["E1", "E2", "E3"], width=5).pack(side="left", padx=5)
 
-                    content = input("Digite o conteúdo da mensagem: ").strip()
+        tk.Label(frame_controles, text="Mensagem:", bg="#f0f0f0").pack(side="left")
+        self.msg_entry = tk.Entry(frame_controles, width=25)
+        self.msg_entry.pack(side="left", padx=5)
 
-                    if not content:
-                        print("Conteúdo vazio. Mensagem não enviada.")
-                        continue
+        tk.Button(frame_controles, text="📨 Enviar", bg="#4CAF50", fg="white", command=self.enviar).pack(side="left", padx=10)
+        tk.Button(frame_controles, text="🔄 Processar 1 Passo (Token)", bg="#2196F3", fg="white", command=self.processar_token).pack(side="right")
 
-                    response = send_request(sock, {
-                        "command": "SEND",
-                        "sender_id": sender_id,
-                        "content": content
-                    })
+        # --- PAINEL DO MEIO: SEQUENCIADORES (O ANEL) ---
+        tk.Label(root, text="Grupo Sequenciador (Anel Lógico)", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(pady=(10, 0))
+        self.frame_anel = tk.Frame(root, bg="#f0f0f0")
+        self.frame_anel.pack(fill="x", padx=20, pady=5)
 
-                    print("\n--- Resposta do servidor ---")
-                    print(response["output"])
+        self.seq_frames = {}
+        self.seq_lists = {}
+        
+        for s in ["S1", "S2", "S3"]:
+            # Frame individual para cada Sequenciador
+            f = tk.Frame(self.frame_anel, borderwidth=2, relief="groove", width=200, height=150)
+            f.pack(side="left", expand=True, fill="both", padx=10)
+            f.pack_propagate(False)
+            
+            lbl = tk.Label(f, text=s, font=("Arial", 14, "bold"))
+            lbl.pack(pady=5)
+            
+            listbox = tk.Listbox(f, height=5, bg="#ffffff")
+            listbox.pack(padx=10, pady=5, fill="both", expand=True)
+            
+            self.seq_frames[s] = {"frame": f, "label": lbl}
+            self.seq_lists[s] = listbox
 
-                elif option == "2":
-                    response = send_request(sock, {
-                        "command": "PROCESS_ONE"
-                    })
+        # --- PAINEL INFERIOR: RECEPTORES ---
+        tk.Label(root, text="Grupo Receptor (Mensagens Entregues)", font=("Arial", 12, "bold"), bg="#f0f0f0").pack(pady=(20, 0))
+        self.frame_receptores = tk.Frame(root, bg="#f0f0f0")
+        self.frame_receptores.pack(fill="x", padx=20, pady=5)
 
-                    print("\n--- Resposta do servidor ---")
-                    print(response["output"])
+        self.rec_lists = {}
+        for r in ["R1", "R2", "R3"]:
+            f = tk.Frame(self.frame_receptores, borderwidth=1, relief="solid", width=200, height=150)
+            f.pack(side="left", expand=True, fill="both", padx=10)
+            f.pack_propagate(False)
+            
+            tk.Label(f, text=r, font=("Arial", 12), bg="#e0e0e0").pack(fill="x")
+            
+            listbox = tk.Listbox(f, height=6)
+            listbox.pack(padx=5, pady=5, fill="both", expand=True)
+            self.rec_lists[r] = listbox
 
-                elif option == "3":
-                    try:
-                        n = int(input("Quantas rodadas deseja processar? "))
+        # Atualiza a interface logo ao abrir
+        self.atualizar_tela()
 
-                        if n <= 0:
-                            print("Digite um número positivo.")
-                            continue
+    def enviar(self):
+        txt = self.msg_entry.get().strip()
+        if not txt: return
+        send_request({"command": "SEND", "sender_id": self.emissor_var.get(), "content": txt})
+        self.msg_entry.delete(0, tk.END)
+        self.atualizar_tela()
 
-                        response = send_request(sock, {
-                            "command": "PROCESS_N",
-                            "n": n
-                        })
+    def processar_token(self):
+        send_request({"command": "PROCESS_ONE"})
+        self.atualizar_tela()
 
-                        print("\n--- Resposta do servidor ---")
-                        print(response["output"])
-
-                    except ValueError:
-                        print("Valor inválido. Digite um número inteiro.")
-
-                elif option == "4":
-                    response = send_request(sock, {
-                        "command": "STATUS"
-                    })
-
-                    print("\n--- Estado do servidor ---")
-                    print(response["output"])
-
-                elif option == "5":
-                    response = send_request(sock, {
-                        "command": "RECEIVER_LOGS"
-                    })
-
-                    print("\n--- Log dos receptores ---")
-                    print(response["output"])
-
-                elif option == "6":
-                    response = send_request(sock, {
-                        "command": "VALIDATE_TOTAL_ORDER"
-                    })
-
-                    print("\n--- Verificação ---")
-                    print(response["output"])
-
-                elif option == "0":
-                    print("Encerrando cliente.")
-                    break
-
-                else:
-                    print("Opção inválida.")
-
-    except ConnectionRefusedError:
-        print("Não foi possível conectar ao servidor.")
-        print("Verifique se o server.py está rodando.")
-    except ConnectionError as error:
-        print(f"Erro de conexão: {error}")
-
+    def atualizar_tela(self):
+        res = send_request({"command": "GET_GUI_STATE"})
+        if not res.get("ok"): return
+        
+        estado = res["output"]
+        
+        # 1. Atualizar cores e Token nos Sequenciadores
+        token_atual = estado["token"]
+        for s, obj in self.seq_frames.items():
+            if s == token_atual:
+                obj["frame"].configure(bg="#fff59d") # Amarelo (com token)
+                obj["label"].configure(text=f"🪙 {s} (TOKEN)", bg="#fff59d")
+            else:
+                obj["frame"].configure(bg="#e0e0e0") # Cinza (sem token)
+                obj["label"].configure(text=s, bg="#e0e0e0")
+                
+            # Atualizar listas de mensagens pendentes
+            self.seq_lists[s].delete(0, tk.END)
+            for msg in estado["buffers"][s]:
+                self.seq_lists[s].insert(tk.END, f"⏳ {msg}")
+                
+        # 2. Atualizar mensagens nos Receptores
+        for r, listbox in self.rec_lists.items():
+            listbox.delete(0, tk.END)
+            for msg in estado["receivers"][r]:
+                listbox.insert(tk.END, f"✅ {msg}")
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = DashboardSequenciador(root)
+    root.mainloop()

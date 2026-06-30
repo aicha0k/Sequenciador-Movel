@@ -1,5 +1,12 @@
 # Sequenciador Móvel
 
+## Table of Contents
+* [Funcionamento](#funcionamento)
+
+* [Requisitos Funcionais](#requisitos-funcionais)
+* [Interação entre `client.py` e `server.py`](#interação-entre-clientpy-e-serverpy)
+* [Como Utilizar](#como-utilizar)
+
 ## Funcionamento
 
 O sequenciador móvel é uma entidade/processo que fica responsável por definir a ordem das mensagens ou eventos em um sistema distribuído,com a diferença que essa função de sequenciar pode “mudar de lugar” entre os nós do sistema. Essa técnica surgiu como uma solução para os problemas de confiabilidade encontrados no modelo de sequenciador fixo.
@@ -83,64 +90,6 @@ O sistema implementa a simulação de um protocolo de difusão totalmente ordena
 
 ## Interação entre `client.py` e `server.py`
 
-## Como Utilizar
-
-Para esse algoritmo, um código demonstrativo de um sequenciador móvel, que envolve um grupo emissor, um grupo sequenciador organizado em anel lógico com token, e um grupo receptor. O emissor difunde a mensagem ao grupo sequenciador, e apenas o sequenciador que possui o token repassa a mensagem ao grupo receptor.
-
-A aplicação foi implementada no modelo cliente-servidor. O cliente representa o grupo emissor, permitindo que o usuário escolha um emissor e envie mensagens ao servidor. O servidor executa o algoritmo de sequenciador móvel, mantendo o grupo sequenciador em anel lógico, o token de privilégio e o grupo receptor. A cada mensagem recebida, o servidor a difunde internamente ao grupo sequenciador. Apenas o sequenciador com token repassa a mensagem ao grupo receptor, atribuindo um número de sequência global.
-
-O arquivo `client.py` é a interface entre o grupo emissor e o restante. O usuário escolhe o emissor e escreve a mensagem a ser enviada, e envia a requisição ao servidor via socket TCP.
-
-O arquivo `server.py` mantém os metadados dos grupos sequenciador, e receptor, além de manter/atualizar os buffers dos sequenciadores, guarda a informação do anél lógico, e do token/bastão, atribui os números de sequência, e entrega as mensagens ao grupo receptor. 
-
-O nosso sistema conta com uma interface gráfica, composto por dois programas, `server.py` e `client.py`. 
-
-O `client.py` cria uma interface gráfica com Tkinter. A interface pode ser vista na imagem abaixo.
-
-![image](./interface-grafica.png)
-
-Na parte superior, o usuário escolhe entre os emissores disponiveis, chamados de E1, E2, e E3. Ao clicar em enviar, o cliente manda uma requisição pro servidor:
-
-```
-{"command": "SEND", "sender_id": "E2", "content": "blablabla"}
-```
-Quando o usuário clicar em _Processar 1 Passo (Token)_, o cliente manda `{"command": "PROCESS_ONE"}`.
-
-No `server.py`, o núcleio da aplicação, possui os grupos emissor, sequenciador, e receptor. Cada sequenciador tem um buffer próprio: `self.buffer = deque()`. O servidor também guarda a posição atual do token, o número global de sequência, e as mensagens já entregues.
-
-Quando uma mensagem chega, o servidor cria um identificador, `E2.1` por exemplo. Isso significa que é primeira mensagem enviada pelo emissor E2. Depois, essa mensagem é colocada no buffer de sequenciadores, como ilustrado abaixo:
-
-```
-S1 recebe E2.1
-S2 recebe E2.1
-S3 recebe E2.1
-```
-Isso simula a difusão do emissor para o grupo sequenciador.
-
-O token define qual sequenciador tem o direito de repassar uma mensagem ao grupo receptor. Na imagem, token está com S2. Quando o usuário clica em `Processar 1 Passo (Token)`, o servidor executa o seguinte fluxo:
-
-1. Verifica quem está com o token.
-2. Esse sequenciador procura uma mensagem pendente em seu buffer.
-3. Se encontrar, atribui um número de sequência global.
-4. Entrega a mensagem para R1, R2 e R3.
-5. Marca a mensagem como entregue.
-6. Passa o token para o próximo sequenciador.
-
-##  Requisitos Funcionais
-
-O sistema implementa a simulação de um protocolo de difusão totalmente ordenada (*Total Order Broadcast*) baseado no algoritmo de **Sequenciador Móvel** com anel lógico. Os requisitos funcioanis são:
-
-| ID | Requisito | Descrição |
-| :--- | :--- | :--- |
-| **RF01** | **Envio e Difusão de Mensagens** | O sistema permite que emissores (`E1`, `E2`, `E3`) enviem mensagens que são difundidas simultaneamente para as filas (*buffers*) de todos os sequenciadores (`S1`, `S2`, `S3`). |
-| **RF02** | **Identificação Única** | Cada mensagem gerada recebe um identificador imutável composto pelo ID do emissor e um contador (ex: `E1.1`). |
-| **RF03** | **Anel Lógico (Token)** | O sistema mantém um anel de sequenciadores onde apenas um membro detém o privilégio de ordenação (o *Token*) a cada instante. O token circula de forma sequencial (`S1 → S2 → S3 → S1`). |
-| **RF04** | **Sequenciamento Global** | O sequenciador com o token extrai a próxima mensagem do seu buffer, atribui um número de sequência global consecutivo e marca a mensagem como processada. |
-| **RF05** | **Entrega aos Receptores** | Após o sequenciamento, a mensagem ordenada é entregue na mesma ordem a todos os receptores lógicos (`R1`, `R2`, `R3`). |
-| **RF06** | **Monitorização Visual** | A interface permite inspecionar, em tempo real, a posição do token, o conteúdo das filas de cada sequenciador e o histórico de entrega nos receptores. |
-
-## Interação entre `client.py` e `server.py`
-
 Para o escopo desta simulação, é fundamental destacar a divisão de responsabilidades:
 
 * **O Servidor (`server.py`) é o motor da simulação:** Ele não é apenas um servidor web; ele simula toda a topologia da rede distribuída. É ele quem gerencia o estado do anel, o avanço do token e as filas de mensagens.
@@ -208,11 +157,11 @@ Simular Envios: No painel superior, selecione o Emissor na lista suspensa (ex: E
 ![](./images/image.png)
 ![](./images/image2.png)
 
-Simular o Token (Sequenciamento): Clique no botão 🔄 Processar 1 Passo (Token).
+Simular o Token (Sequenciamento): Clique no botão Processar 1 Passo (Token).
 
-O Token (destaque amarelo 🪙) passará para o próximo sequenciador.
+O Token (destaque amarelo) passará para o próximo sequenciador.
 
-Se o sequenciador atual possuir a mensagem pendente, ela sairá do painel superior e aparecerá no painel inferior (Grupo Receptor) com um visto (✅), confirmando que foi globalmente ordenada e entregue.
+Se o sequenciador atual possuir a mensagem pendente, ela sairá do painel superior e aparecerá no painel inferior (Grupo Receptor) com um visto, confirmando que foi globalmente ordenada e entregue.
 
 ![](./images/image3.png)
 

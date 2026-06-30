@@ -126,13 +126,7 @@ O token define qual sequenciador tem o direito de repassar uma mensagem ao grupo
 5. Marca a mensagem como entregue.
 6. Passa o token para o próximo sequenciador.
 
-## Requisitos Funcionais
-
-## Interação entre `client.py` e `server.py`
-
-## Como Utilizar
-
-## 1. Requisitos Funcionais
+##  Requisitos Funcionais
 
 O sistema implementa a simulação de um protocolo de difusão totalmente ordenada (*Total Order Broadcast*) baseado no algoritmo de **Sequenciador Móvel** com anel lógico. Os requisitos funcioanis são:
 
@@ -145,7 +139,7 @@ O sistema implementa a simulação de um protocolo de difusão totalmente ordena
 | **RF05** | **Entrega aos Receptores** | Após o sequenciamento, a mensagem ordenada é entregue na mesma ordem a todos os receptores lógicos (`R1`, `R2`, `R3`). |
 | **RF06** | **Monitorização Visual** | A interface permite inspecionar, em tempo real, a posição do token, o conteúdo das filas de cada sequenciador e o histórico de entrega nos receptores. |
 
-## 2. Interação entre client.py e server.py
+## Interação entre `client.py` e `server.py`
 
 Para o escopo desta simulação, é fundamental destacar a divisão de responsabilidades:
 

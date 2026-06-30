@@ -19,7 +19,11 @@ Diferente do sequenciador fixo, onde um único nó decide a ordem de todas as me
 
 O privilégio de ordenar e repassar as mensagens circula por esse anel por meio de um *token*. Apenas o processo que possui o bastão no momento pode definir a ordem e enviar as mensagens ao grupo receptor.
 
-Quando um emissor quer enviar uma mensagem, ele a difunde para todo o **grupo de sequenciadores**. O sequenciador que detém o bastão recebe essa mensagem, atribui-lhe uma ordem e a repassa para os destinatários finais
+Quando um emissor quer enviar uma mensagem, ele a difunde para todo o **grupo de sequenciadores**. O sequenciador que detém o bastão recebe essa mensagem, atribui-lhe uma ordem e a repassa para os destinatários finais.
+
+O sequenciador móvel pode ser ilustrado conforme diagrama abaixo.
+
+![image](./images/sequenciadormovel.png)
 
 Como cada processo receptor conhece a sequência exata dos processos no anel lógico dos sequenciadores, eles conseguem estabelecer uma **ordem total determinística** das mensagens recebidas, garantindo que todos os membros do grupo vejam as informações na mesma sequência.
 
@@ -45,7 +49,7 @@ O nosso sistema conta com uma interface gráfica, composto por dois programas, `
 
 O `client.py` cria uma interface gráfica com Tkinter. A interface pode ser vista na imagem abaixo.
 
-![image](./interface-grafica.png)
+![image](./images/interface-grafica.png)
 
 Na parte superior, o usuário escolhe entre os emissores disponiveis, chamados de E1, E2, e E3. Ao clicar em enviar, o cliente manda uma requisição pro servidor:
 
